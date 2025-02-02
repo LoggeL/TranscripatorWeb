@@ -1,0 +1,51 @@
+/* Custom scrollbar for results */
+#transcription-text,
+#summary-text {
+  max-height: 400px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+#transcription-text::-webkit-scrollbar,
+#summary-text::-webkit-scrollbar {
+  width: 8px;
+}
+
+#transcription-text::-webkit-scrollbar-track,
+#summary-text::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+#transcription-text::-webkit-scrollbar-thumb,
+#summary-text::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+#transcription-text::-webkit-scrollbar-thumb:hover,
+#summary-text::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Drag and drop animation */
+#drop-zone {
+  transition: all 0.2s ease;
+}
+
+#drop-zone:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

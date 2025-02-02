@@ -287,4 +287,4 @@ if __name__ == "__main__":
         raise ValueError("GROQ_API_KEY is not set in the .env file")
     if not TURNSTILE_SECRET_KEY or not TURNSTILE_SITE_KEY:
         raise ValueError("Turnstile keys are not set in the .env file")
-    app.run(debug=DEBUG, port=PORT)
+    app.run(debug=DEBUG, port=PORT, host="0.0.0.0")

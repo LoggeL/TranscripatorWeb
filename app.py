@@ -23,6 +23,10 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024  # 25MB max file size
 app.config["UPLOAD_FOLDER"] = tempfile.gettempdir()
 
+# Configuration
+PORT = int(os.getenv("PORT", "5000"))
+DEBUG = os.getenv("FLASK_ENV", "development") == "development"
+
 # Groq API configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_API_URL = "https://api.groq.com/openai/v1"
@@ -283,4 +287,4 @@ if __name__ == "__main__":
         raise ValueError("GROQ_API_KEY is not set in the .env file")
     if not TURNSTILE_SECRET_KEY or not TURNSTILE_SITE_KEY:
         raise ValueError("Turnstile keys are not set in the .env file")
-    app.run(debug=True)
+    app.run(debug=DEBUG, port=PORT)

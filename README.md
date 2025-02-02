@@ -38,15 +38,21 @@ cd audio-transcription-app
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file in the root directory and add your API keys:
+3. Create a `.env` file in the root directory and add your configuration:
 
 ```env
+# Required API Keys
 GROQ_API_KEY=your_groq_api_key_here
 TURNSTILE_SITE_KEY=your_turnstile_site_key_here
 TURNSTILE_SECRET_KEY=your_turnstile_secret_key_here
+
+# Optional Configuration
+PORT=5000                    # Default: 5000
+FLASK_ENV=development       # Default: development
 ```
 
 To get your Turnstile keys:
+
 1. Go to the Cloudflare dashboard (https://dash.cloudflare.com)
 2. Navigate to "Turnstile"
 3. Click "Add Site"
@@ -60,9 +66,15 @@ To get your Turnstile keys:
 python app.py
 ```
 
-2. Open your web browser and navigate to `http://localhost:5000`
+The server will start on port 5000 by default. To use a different port:
+
+- Set the `PORT` environment variable in your `.env` file, or
+- Run with an environment variable: `PORT=8000 python app.py`
+
+2. Open your web browser and navigate to `http://localhost:<PORT>` (replace `<PORT>` with your configured port)
 
 3. Upload an audio file by either:
+
    - Dragging and dropping the file onto the upload area
    - Clicking the upload area and selecting a file
 

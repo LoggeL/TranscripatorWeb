@@ -1,139 +1,228 @@
-# Audio Transcription Web App
+# TranscriptorWeb - AI Audio Transcription & Enhancement
 
-A modern web application that transcribes audio files, improves the transcription, and generates a summary using Groq's AI models. Features real-time updates and secure file processing with Cloudflare Turnstile protection.
+A modern, beautiful web application that transcribes audio files using AI and enhances them with intelligent improvements and summaries. Built with Flask and powered by Groq Whisper for transcription and Cerebras AI for enhancement.
 
-## Features
+## 🌟 Features
 
-- Drag and drop or click to upload audio files
-- Real-time transcription updates as processing happens
-- Cloudflare Turnstile protection against abuse
-- Beautiful, responsive UI with modern gradient design
-- Supports multiple audio formats (MP3, WAV, OGG, M4A, etc.)
-- File size limit of 25MB
-- Three-stage processing:
-  1. Initial transcription
-  2. Improved transcription with better formatting
-  3. Concise summary generation
-- Comprehensive error handling and validation
+- **🎙️ AI-Powered Transcription**: High-accuracy transcription using Groq's Whisper-large-v3 model
+- **✨ Intelligent Enhancement**: Improves grammar, readability, and coherence using Cerebras AI
+- **📝 Smart Summarization**: Generates concise, bullet-pointed summaries with key insights
+- **🎨 Modern UI**: Beautiful, animated interface with real-time progress tracking
+- **📱 Responsive Design**: Works perfectly on desktop, tablet, and mobile devices
+- **🎯 Multiple Audio Formats**: Supports MP3, WAV, OGG, M4A, AAC, FLAC, and more
+- **📋 One-Click Copy**: Easy copying of transcriptions and summaries to clipboard
+- **🔄 Real-Time Processing**: Live progress updates with progressive tab system
+- **💾 Large File Support**: Handles audio files up to 25MB
+- **🛡️ Background Security**: Invisible proof-of-work system prevents abuse
+- **🌐 No Registration Required**: Process audio files instantly without signing up
+- **🔁 Smart Retry System**: Automatic retry with error recovery
 
-## Prerequisites
+## 🚀 Live Demo
 
-- Python 3.7 or higher
-- Groq API key
-- Cloudflare Turnstile site and secret keys
-- Flask
+Experience the app at: [Your deployment URL]
 
-## Installation
+## 🛠️ Technology Stack
 
-1. Clone the repository:
+- **Backend**: Flask (Python)
+- **Frontend**: Vanilla JavaScript with modern CSS animations and Web Workers
+- **AI Services**: 
+  - Groq Whisper (Transcription)
+  - Cerebras AI (Enhancement & Summarization)
+- **Audio Processing**: PyDub
+- **UI Framework**: Custom CSS with Font Awesome icons
+- **Security**: Proof-of-Work system with Web Workers
 
+## 📦 Installation
+
+### Prerequisites
+
+- Python 3.8+
+- Audio file processing libraries (installed via pip)
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/LoggeL/TranscriptorWeb.git
+   cd TranscriptorWeb
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Set up environment variables**
+   Create a `.env` file in the root directory:
+   ```env
+   GROQ_API_KEY=your_groq_api_key_here
+   CEREBRAS_API_KEY=your_cerebras_api_key_here
+   FLASK_ENV=development
+   PORT=5000
+   ```
+
+4. **Run the application**
+   ```bash
+   python app.py
+   ```
+
+5. **Access the app**
+   Open your browser and navigate to `http://localhost:5000`
+
+## 🔑 API Keys Setup
+
+### Groq API Key
+1. Visit [Groq Console](https://console.groq.com)
+2. Sign up for an account
+3. Generate an API key
+4. Add it to your `.env` file as `GROQ_API_KEY`
+
+### Cerebras API Key
+1. Visit [Cerebras Cloud](https://cloud.cerebras.ai)
+2. Create an account
+3. Generate an API key
+4. Add it to your `.env` file as `CEREBRAS_API_KEY`
+
+## 🎯 Usage
+
+1. **Upload Audio**: Drag and drop an audio file or click to browse
+2. **Automatic Security**: Background verification runs automatically (completely hidden)
+3. **Start Processing**: Click the process button once security verification completes
+4. **Progressive Results**: Results appear progressively as each step completes:
+   - Original transcription appears first
+   - Enhanced transcription follows
+   - Summary appears last
+5. **Tab Navigation**: Switch between different results using the progressive tab system
+6. **Copy & Use**: Click copy buttons to easily use the results
+7. **Error Recovery**: Automatic retry system handles temporary failures
+
+## 🎨 UI Features
+
+- **Gradient Backgrounds**: Beautiful gradient overlays with glassmorphism effects
+- **Smooth Animations**: Fade-in effects, progress bars, and hover animations
+- **Progressive Tabs**: Results appear in tabs as each processing step completes
+- **Progress Tracking**: Visual step indicators showing upload → transcription → enhancement → summarization
+- **Toast Notifications**: Success and error messages with smooth animations
+- **Responsive Cards**: Clean, modern card layout that adapts to all screen sizes
+- **Smart Retry Modal**: User-friendly error handling with retry options
+- **Background Security**: Invisible proof-of-work verification for abuse prevention
+
+## 📄 Supported File Formats
+
+- **MP3** - Most common audio format
+- **WAV** - Uncompressed audio
+- **OGG** - Open-source audio format
+- **M4A** - Apple's audio format
+- **AAC** - Advanced Audio Coding
+- **FLAC** - Lossless audio compression
+- **And more** - Most common audio formats are supported
+
+## 🔧 Configuration
+
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GROQ_API_KEY` | API key for Groq transcription service | Yes |
+| `CEREBRAS_API_KEY` | API key for Cerebras enhancement service | Yes |
+| `FLASK_ENV` | Flask environment (development/production) | No |
+| `PORT` | Port number for the Flask app | No (default: 5000) |
+
+### File Size Limits
+
+- Maximum file size: 25MB
+- Automatic format conversion for unsupported formats
+- Optimized processing for faster results
+
+## 🚀 Deployment
+
+### Local Development
 ```bash
-git clone <repository-url>
-cd audio-transcription-app
-```
-
-2. Install the required packages:
-
-```bash
-pip install -r requirements.txt
-```
-
-3. Create a `.env` file in the root directory and add your configuration:
-
-```env
-# Required API Keys
-GROQ_API_KEY=your_groq_api_key_here
-TURNSTILE_SITE_KEY=your_turnstile_site_key_here
-TURNSTILE_SECRET_KEY=your_turnstile_secret_key_here
-
-# Optional Configuration
-PORT=5000                    # Default: 5000
-FLASK_ENV=development       # Default: development
-```
-
-To get your Turnstile keys:
-
-1. Go to the Cloudflare dashboard (https://dash.cloudflare.com)
-2. Navigate to "Turnstile"
-3. Click "Add Site"
-4. Copy the site key and secret key
-
-## Usage
-
-1. Start the Flask development server:
-
-```bash
+export FLASK_ENV=development
 python app.py
 ```
 
-The server will start on port 5000 by default. To use a different port:
-
-- Set the `PORT` environment variable in your `.env` file, or
-- Run with an environment variable: `PORT=8000 python app.py`
-
-2. Open your web browser and navigate to `http://localhost:<PORT>` (replace `<PORT>` with your configured port)
-
-3. Upload an audio file by either:
-
-   - Dragging and dropping the file onto the upload area
-   - Clicking the upload area and selecting a file
-
-4. Complete the Turnstile verification
-
-5. Click "Process Audio" to start transcription
-
-6. Watch as the processing happens in real-time:
-   - Initial transcription appears immediately
-   - Improved version follows shortly after
-   - Summary is generated last
-
-## Development
-
-The application is built with:
-
-- Flask (Backend)
-- TailwindCSS (Styling)
-- Vanilla JavaScript (Frontend)
-- Groq API (AI Models)
-- Cloudflare Turnstile (Security)
-
-## Project Structure
-
-```
-.
-├── app.py              # Flask application
-├── requirements.txt    # Python dependencies
-├── static/
-│   └── script.js      # Frontend JavaScript
-├── templates/
-│   └── index.html     # Main HTML template
-└── .env               # Environment variables
+### Production Deployment
+```bash
+export FLASK_ENV=production
+gunicorn -w 4 -b 0.0.0.0:5000 app:app
 ```
 
-## Security Features
+### Docker Deployment
+```dockerfile
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 5000
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
+```
 
-- Cloudflare Turnstile protection against automated abuse
-- Secure file handling with temporary storage
-- Automatic file cleanup after processing
-- File type validation
-- Size restrictions
-- Secure filename handling
+## 🔒 Security & Privacy
 
-## Error Handling
+- **Background Protection**: Invisible proof-of-work system prevents abuse without user interaction
+- **No Data Storage**: Audio files and transcriptions are not stored on our servers
+- **Temporary Processing**: Files are processed in memory and immediately deleted
+- **API Security**: All API communications are encrypted
+- **No User Tracking**: We don't track users or store personal information
+- **Challenge-Response**: Cryptographic challenges prevent automated abuse
+- **Rate Limiting**: Built-in protection against excessive requests
 
-The application includes comprehensive error handling for:
+## 🤝 Contributing
 
-- Invalid file types
-- File size limits
-- API errors
-- Processing failures
-- CAPTCHA verification failures
-- Network issues
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Contributing
+## 📝 License
 
-Feel free to submit issues and enhancement requests!
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## License
+## 🙏 Acknowledgments
 
-[MIT License](LICENSE)
+- **Groq** for providing excellent Whisper transcription API
+- **Cerebras** for powerful language model capabilities
+- **Font Awesome** for beautiful icons
+- **Inter Font** for clean typography
+
+## 📞 Support
+
+If you encounter any issues or have questions:
+
+1. Check the [Issues](https://github.com/LoggeL/TranscriptorWeb/issues) page
+2. Create a new issue if your problem isn't already reported
+3. Provide as much detail as possible including:
+   - Audio file format and size
+   - Browser and operating system
+   - Error messages (if any)
+
+## 🔄 Changelog
+
+### v3.0.0 (Latest)
+- 🛡️ Added invisible proof-of-work security system
+- 📑 Implemented progressive tab system for results
+- 🔁 Added comprehensive retry system with error recovery
+- 🎭 Enhanced UI with better animations and feedback
+- 🧵 Background processing with Web Workers
+- 🔧 Improved error handling and debugging
+- 📱 Better mobile responsiveness
+
+### v2.0.0
+- ✨ Complete UI redesign with modern animations
+- 🔄 Real-time progress tracking
+- 🧠 Switched to Cerebras AI for better enhancement and summarization
+- 📱 Improved mobile responsiveness
+- 🎨 Added glassmorphism effects and smooth animations
+- 📋 One-click copy functionality
+
+### v1.0.0
+- 🎙️ Basic transcription functionality
+- 📝 Summary generation
+- 🌐 Web interface
+
+---
+
+**Built with ❤️ by [LoggeL](https://github.com/LoggeL) for the AI community**

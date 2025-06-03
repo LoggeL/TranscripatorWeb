@@ -1,232 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Audio Transcription App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script
-      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-      async
-      defer
-    ></script>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-      body {
-        font-family: 'Inter', sans-serif;
-      }
-      .gradient-text {
-        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-      .gradient-border {
-        background: linear-gradient(white, white) padding-box,
-          linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) border-box;
-        border: 2px solid transparent;
-      }
-      .loading-wave {
-        width: 5px;
-        height: 100px;
-        background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-        margin: 10px;
-        animation: wave 1s linear infinite;
-        border-radius: 20px;
-      }
-      .loading-wave:nth-child(2) {
-        animation-delay: 0.1s;
-      }
-      .loading-wave:nth-child(3) {
-        animation-delay: 0.2s;
-      }
-      .loading-wave:nth-child(4) {
-        animation-delay: 0.3s;
-      }
-      .loading-wave:nth-child(5) {
-        animation-delay: 0.4s;
-      }
-      @keyframes wave {
-        0% {
-          transform: scale(0);
-        }
-        50% {
-          transform: scale(1);
-        }
-        100% {
-          transform: scale(0);
-        }
-      }
-    </style>
-  </head>
-  <body class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-12">
-      <header class="text-center mb-16">
-        <h1 class="text-5xl font-bold gradient-text mb-4">
-          Audio Transcription
-        </h1>
-        <p class="text-gray-600 text-lg">
-          Transform your audio into text with AI-powered transcription
-        </p>
-      </header>
-
-      <div class="max-w-3xl mx-auto">
-        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          <div class="upload-section mb-8">
-            <div
-              id="drop-zone"
-              class="gradient-border rounded-xl p-8 text-center cursor-pointer transition-all hover:shadow-md"
-            >
-              <input
-                type="file"
-                id="file-input"
-                class="hidden"
-                accept="audio/*"
-              />
-              <div class="mb-4">
-                <svg
-                  class="mx-auto h-16 w-16 text-blue-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                  />
-                </svg>
-              </div>
-              <p class="text-gray-700 text-lg mb-2">
-                Drag and drop your audio file here or click to browse
-              </p>
-              <p class="text-sm text-gray-500">
-                Supported formats: MP3, WAV, OGG, M4A, and more
-              </p>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TranscriptorWeb - AI Audio Transcription</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-microphone-alt"></i>
+                <h1>TranscriptorWeb</h1>
             </div>
-          </div>
+            <p class="subtitle">AI-Powered Audio Transcription & Summarization</p>
+        </header>
 
-          <div id="selected-file" class="hidden mb-6">
-            <div
-              class="flex items-center justify-between bg-gray-50 p-4 rounded-lg"
-            >
-              <div class="flex items-center">
-                <svg
-                  class="h-6 w-6 text-blue-500 mr-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                  />
-                </svg>
-                <span class="text-gray-700 font-medium" id="file-name"></span>
-              </div>
-              <button
-                id="remove-file"
-                class="text-red-500 hover:text-red-700 p-2"
-              >
-                <svg
-                  class="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section class="upload-section" id="uploadSection">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <h3>Upload Your Audio File</h3>
+                        <p>Drag and drop your audio file here, or click to browse</p>
+                        <p class="file-info">Supports MP3, WAV, M4A, OGG, FLAC, WEBM (Max: 25MB)</p>
+                        <input type="file" id="audioFile" accept="audio/*" hidden>
+                        <button class="upload-btn" onclick="document.getElementById('audioFile').click()">
+                            <i class="fas fa-folder-open"></i> Choose File
+                        </button>
+                    </div>
+                </div>
+                <div class="file-selected" id="fileSelected" style="display: none;">
+                    <div class="file-info-display">
+                        <i class="fas fa-file-audio"></i>
+                        <div class="file-details">
+                            <span class="file-name" id="fileName"></span>
+                            <span class="file-size" id="fileSize"></span>
+                        </div>
+                        <button class="change-file-btn" onclick="resetUpload()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Proof-of-Work Section -->
+                    <div class="captcha-section">
+                        <div class="captcha-container">
+                            <div class="captcha-question">
+                                <span class="captcha-label">Security Verification:</span>
+                                <div class="captcha-math">
+                                    <div class="pow-status" id="powStatus">
+                                        <i class="fas fa-shield-alt"></i>
+                                        <span>Verifying security...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="captcha-input">
+                                <div class="captcha-status" id="captchaStatus"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="process-btn" id="processBtn" onclick="startProcessing()" disabled>
+                        <i class="fas fa-play"></i> Start Processing
+                    </button>
+                </div>
+            </section>
+
+            <!-- Results Section with Progressive Tabs -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-header">
+                    <h3>Processing Results</h3>
+                    <button class="new-file-btn" onclick="resetAll()">
+                        <i class="fas fa-plus"></i> Process New File
+                    </button>
+                </div>
+
+                <!-- Progressive Tabs -->
+                <div class="results-tabs" id="resultsTabs">
+                    <button class="tab-btn" id="originalTab" onclick="showTab('original')" style="display: none;">
+                        <i class="fas fa-file-text"></i> Original Transcription
+                    </button>
+                    <button class="tab-btn" id="improvedTab" onclick="showTab('improved')" style="display: none;">
+                        <i class="fas fa-edit"></i> Enhanced Text
+                    </button>
+                    <button class="tab-btn" id="summaryTab" onclick="showTab('summary')" style="display: none;">
+                        <i class="fas fa-list-ul"></i> Summary
+                    </button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="originalContent" style="display: none;">
+                    <div class="result-box">
+                        <div class="result-header">
+                            <h4><i class="fas fa-file-text"></i> Original Transcription</h4>
+                            <button class="copy-btn" onclick="copyToClipboard('originalText')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <div class="result-content" id="originalText">
+                            <!-- Original transcription will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="improvedContent" style="display: none;">
+                    <div class="result-box">
+                        <div class="result-header">
+                            <h4><i class="fas fa-edit"></i> Enhanced Text</h4>
+                            <button class="copy-btn" onclick="copyToClipboard('improvedText')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <div class="result-content" id="improvedText">
+                            <!-- Improved transcription will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="summaryContent" style="display: none;">
+                    <div class="result-box">
+                        <div class="result-header">
+                            <h4><i class="fas fa-list-ul"></i> Summary</h4>
+                            <button class="copy-btn" onclick="copyToClipboard('summaryText')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <div class="result-content" id="summaryText">
+                            <!-- Summary will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Placeholder when no results yet -->
+                <div class="no-results" id="noResults">
+                    <div class="no-results-content">
+                        <i class="fas fa-hourglass-half"></i>
+                        <h4>Processing in progress...</h4>
+                        <p>Results will appear here as each step completes.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Progress Section - Now at the Bottom -->
+            <section class="progress-section" id="progressSection" style="display: none;">
+                <div class="progress-header">
+                    <h3>Processing Your Audio</h3>
+                    <div class="overall-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="overallProgress"></div>
+                        </div>
+                        <span class="progress-text" id="overallProgressText">0%</span>
+                    </div>
+                </div>
+
+                <div class="current-step" id="currentStep">
+                    <div class="step-info">
+                        <div class="step-icon" id="currentStepIcon">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <div class="step-content">
+                            <h4 id="currentStepTitle">File Upload & Preprocessing</h4>
+                            <p id="currentStepDescription">Uploading and preparing your audio file...</p>
+                            <div class="step-status processing" id="currentStepStatus">
+                                <i class="fas fa-spinner fa-spin"></i> <span id="currentStepMessage">Initializing...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="steps-overview">
+                    <div class="step-indicator" id="indicator1">
+                        <div class="indicator-dot"></div>
+                        <span>Upload</span>
+                    </div>
+                    <div class="step-indicator" id="indicator2">
+                        <div class="indicator-dot"></div>
+                        <span>Transcribe</span>
+                    </div>
+                    <div class="step-indicator" id="indicator3">
+                        <div class="indicator-dot"></div>
+                        <span>Enhance</span>
+                    </div>
+                    <div class="step-indicator" id="indicator4">
+                        <div class="indicator-dot"></div>
+                        <span>Summarize</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="spinner"></div>
+            <p id="loadingText">Processing...</p>
+        </div>
+
+        <!-- Error Messages -->
+        <div class="error-message" id="errorMessage" style="display: none;">
+            <div class="error-content">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="errorText"></span>
+                <button class="close-error" onclick="hideError()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-          </div>
-
-          <div class="cf-turnstile mb-6" data-sitekey=""></div>
-
-          <button
-            id="process-btn"
-            class="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:opacity-90 transition-all disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed"
-            disabled
-          >
-            Process Audio
-          </button>
         </div>
 
-        <div id="loading" class="hidden">
-          <div class="flex justify-center items-end mb-8">
-            <div class="loading-wave"></div>
-            <div class="loading-wave"></div>
-            <div class="loading-wave"></div>
-            <div class="loading-wave"></div>
-            <div class="loading-wave"></div>
-          </div>
-          <p class="text-center text-gray-600 text-lg" id="loading-status">
-            Processing your audio...
-          </p>
+        <!-- Retry Section -->
+        <div class="retry-section" id="retrySection" style="display: none;">
+            <div class="retry-content">
+                <div class="retry-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>Processing Failed</h3>
+                </div>
+                <div class="retry-message">
+                    <p id="retryErrorText">An error occurred during processing.</p>
+                    <p class="retry-step-info" id="retryStepInfo">Failed at: Step 1 - File Upload</p>
+                </div>
+                <div class="retry-actions">
+                    <button class="retry-btn primary" id="retryStepBtn" onclick="retryCurrentStep()">
+                        <i class="fas fa-redo"></i> Retry This Step
+                    </button>
+                    <button class="retry-btn secondary" onclick="retryFromBeginning()">
+                        <i class="fas fa-refresh"></i> Start Over
+                    </button>
+                    <button class="retry-btn tertiary" onclick="hideRetrySection()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+                <div class="retry-count" id="retryCount" style="display: none;">
+                    <span>Retry attempts: <span id="retryAttempts">0</span>/3</span>
+                </div>
+            </div>
         </div>
 
-        <div id="results" class="hidden space-y-8">
-          <div class="bg-white rounded-2xl shadow-xl p-8">
-            <h2
-              class="text-2xl font-semibold text-gray-800 mb-4 flex items-center"
-            >
-              <svg
-                class="h-6 w-6 text-blue-500 mr-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              Transcription
-            </h2>
-            <div
-              id="transcription-text"
-              class="prose max-w-none text-gray-700"
-            ></div>
-          </div>
-
-          <div class="bg-white rounded-2xl shadow-xl p-8">
-            <h2
-              class="text-2xl font-semibold text-gray-800 mb-4 flex items-center"
-            >
-              <svg
-                class="h-6 w-6 text-purple-500 mr-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-              Summary
-            </h2>
-            <div id="summary-text" class="prose max-w-none text-gray-700"></div>
-          </div>
+        <!-- Success Messages -->
+        <div class="success-message" id="successMessage" style="display: none;">
+            <div class="success-content">
+                <i class="fas fa-check-circle"></i>
+                <span id="successText"></span>
+            </div>
         </div>
-
-        <div
-          id="error"
-          class="hidden mt-4 p-6 bg-red-50 border border-red-200 text-red-700 rounded-xl"
-        ></div>
-      </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-  </body>
+</body>
 </html>

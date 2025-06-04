@@ -6,6 +6,7 @@ import random # Added for captcha generation
 import time # Added for captcha expiration
 import hashlib # Added for proof-of-work
 import secrets # Added for secure random generation
+import re # Added for regex operations to remove <think> tags
 from flask import Flask, render_template, request, jsonify # Removed Response, stream_with_context for now
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -223,7 +224,7 @@ Improved transcription:
     if response.status_code != 200:
         raise Exception(f"Cerebras API request failed with status {response.status_code}: {response.text}")
     
-    return response.json()['choices'][0]['message']['content']
+    return remove_think_tags(response.json()['choices'][0]['message']['content'])   
 
 
 def generate_summary_cerebras(transcription: str) -> str:
@@ -266,7 +267,7 @@ Summary:
     if response.status_code != 200:
         raise Exception(f"Cerebras API request failed with status {response.status_code}: {response.text}")
     
-    return response.json()['choices'][0]['message']['content']
+    return remove_think_tags(response.json()['choices'][0]['message']['content'])
 
 
 @app.route("/")
@@ -576,6 +577,23 @@ def debug_pow():
         "store_count": len(pow_store),
         "challenges": store_info
     })
+
+# Helper function to remove <think> tags and their content
+def remove_think_tags(text: str) -> str:
+    """Remove any content within <think> tags from the text."""
+    if not text:
+        return text
+    
+    # Use regex to find and remove <think>...</think> blocks (including nested tags)
+    # This handles both single line and multiline think blocks
+    pattern = r'<think>.*?</think>'
+    cleaned_text = re.sub(pattern, '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Clean up any extra whitespace that might be left
+    cleaned_text = re.sub(r'\n\s*\n\s*\n', '\n\n', cleaned_text)  # Remove excessive newlines
+    cleaned_text = cleaned_text.strip()
+    
+    return cleaned_text
 
 if __name__ == "__main__":
     if not GROQ_API_KEY:

@@ -4,6 +4,13 @@ let currentFile = null;
 let isProcessing = false;
 let currentActiveTab = null;
 
+// Store original content for clipboard copying
+let originalContent = {
+    original: '',
+    improved: '',
+    summary: ''
+};
+
 // Proof-of-Work variables
 let currentPowId = null;
 let isPowValid = false;
@@ -742,8 +749,24 @@ function showResult(tabType, content) {
     // Hide no results placeholder
     hideNoResults();
     
-    // Fill the content
-    document.getElementById(`${tabType}Text`).textContent = content;
+    // Store original content for clipboard copying
+    originalContent[tabType] = content;
+    
+    // Fill the content - render markdown for summary, plain text for others
+    const contentElement = document.getElementById(`${tabType}Text`);
+    if (tabType === 'summary') {
+        // Configure marked options for better formatting
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            sanitize: false
+        });
+        // Render markdown content
+        contentElement.innerHTML = marked.parse(content);
+    } else {
+        // Use plain text for other tabs
+        contentElement.textContent = content;
+    }
     
     // Show and activate the tab
     const tabButton = document.getElementById(`${tabType}Tab`);
@@ -877,7 +900,14 @@ function resetProgress() {
     // Clear all content
     document.getElementById('originalText').textContent = '';
     document.getElementById('improvedText').textContent = '';
-    document.getElementById('summaryText').textContent = '';
+    document.getElementById('summaryText').innerHTML = '';
+    
+    // Clear stored original content
+    originalContent = {
+        original: '',
+        improved: '',
+        summary: ''
+    };
     
     // Reset tabs
     showNoResults();
@@ -889,8 +919,11 @@ function resetProgress() {
 
 // Copy to clipboard functionality
 async function copyToClipboard(elementId) {
-    const element = document.getElementById(elementId);
-    const text = element.textContent;
+    // Determine the tab type from element ID
+    const tabType = elementId.replace('Text', ''); // e.g., 'summaryText' -> 'summary'
+    
+    // Use original content for copying (preserves markdown for summary)
+    const text = originalContent[tabType] || document.getElementById(elementId).textContent;
     
     try {
         await navigator.clipboard.writeText(text);

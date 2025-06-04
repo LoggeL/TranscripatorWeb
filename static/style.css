@@ -475,6 +475,137 @@ body {
     font-size: 1rem;
 }
 
+/* Markdown-specific styling for summary content */
+#summaryText {
+    white-space: normal; /* Allow normal text wrapping for HTML content */
+}
+
+#summaryText h1, #summaryText h2, #summaryText h3, #summaryText h4, #summaryText h5, #summaryText h6 {
+    margin: 20px 0 10px 0;
+    color: #2c3e50;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+#summaryText h1 {
+    font-size: 1.5rem;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 5px;
+}
+
+#summaryText h2 {
+    font-size: 1.3rem;
+    color: #667eea;
+}
+
+#summaryText h3 {
+    font-size: 1.2rem;
+    color: #555;
+}
+
+#summaryText h4, #summaryText h5, #summaryText h6 {
+    font-size: 1.1rem;
+    color: #666;
+}
+
+#summaryText p {
+    margin: 12px 0;
+    line-height: 1.6;
+}
+
+#summaryText ul, #summaryText ol {
+    margin: 15px 0;
+    padding-left: 25px;
+}
+
+#summaryText li {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+#summaryText strong, #summaryText b {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+#summaryText em, #summaryText i {
+    font-style: italic;
+    color: #555;
+}
+
+#summaryText code {
+    background: #f4f4f4;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #d63384;
+}
+
+#summaryText pre {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    overflow-x: auto;
+    margin: 15px 0;
+}
+
+#summaryText blockquote {
+    border-left: 4px solid #667eea;
+    padding-left: 15px;
+    margin: 15px 0;
+    color: #666;
+    font-style: italic;
+    background: rgba(102, 126, 234, 0.05);
+    padding: 10px 15px;
+    border-radius: 0 8px 8px 0;
+}
+
+#summaryText hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    margin: 25px 0;
+    border-radius: 1px;
+}
+
+#summaryText a {
+    color: #667eea;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-bottom 0.2s ease;
+}
+
+#summaryText a:hover {
+    border-bottom-color: #667eea;
+}
+
+#summaryText table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+#summaryText th, #summaryText td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+#summaryText th {
+    background: #667eea;
+    color: white;
+    font-weight: 600;
+}
+
+#summaryText tr:hover {
+    background: rgba(102, 126, 234, 0.05);
+}
+
 /* No Results Placeholder */
 .no-results {
     text-align: center;

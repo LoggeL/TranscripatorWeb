@@ -43,7 +43,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
 GROQ_API_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions"
-CEREBRAS_MODEL = "llama-4-scout-17b-16e-instruct"
+CEREBRAS_MODEL = "qwen-3-32b"
 
 # Constants
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB in bytes

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TranscripatorWeb - AI Audio Transcription</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <i class="fas fa-microphone-alt"></i>
+                <span>TRANSCRIPATOR</span>
+            </div>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <section class="hero">
+            <h1 class="hero-title">AI AUDIO<br><span class="gradient-text">TRANSCRIPTION</span></h1>
+            <p class="hero-subtitle">Upload or record audio. Get transcription, enhancement, and summary powered by AI.</p>
+        </section>
+
+        <main class="main-content">
+            <section class="card upload-section" id="uploadSection">
+                <div class="card-header">
+                    <h2>INPUT AUDIO</h2>
+                </div>
+
+                <div class="mode-toggle">
+                    <button class="mode-btn active" id="uploadModeBtn" onclick="switchMode('upload')">
+                        <i class="fas fa-cloud-upload-alt"></i> UPLOAD FILE
+                    </button>
+                    <button class="mode-btn" id="recordModeBtn" onclick="switchMode('record')">
+                        <i class="fas fa-microphone"></i> RECORD
+                    </button>
+                </div>
+
+                <div class="mode-content" id="uploadMode">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-content">
+                            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                            <h3>DROP YOUR AUDIO FILE</h3>
+                            <p>or click to browse</p>
+                            <p class="file-info-hint">MP3, WAV, M4A, OGG, FLAC, WEBM (Max: 25MB)</p>
+                            <input type="file" id="audioFile" accept="audio/*" hidden>
+                            <button class="btn btn-primary" onclick="document.getElementById('audioFile').click()">
+                                <i class="fas fa-folder-open"></i> CHOOSE FILE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mode-content" id="recordMode" style="display: none;">
+                    <div class="record-area">
+                        <div class="record-visualizer" id="recordVisualizer">
+                            <canvas id="audioCanvas" width="600" height="120"></canvas>
+                        </div>
+                        <div class="record-timer" id="recordTimer">00:00</div>
+                        <div class="record-controls">
+                            <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <span class="record-label" id="recordLabel">TAP TO RECORD</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="file-selected" id="fileSelected" style="display: none;">
+                    <div class="file-info-display">
+                        <i class="fas fa-file-audio"></i>
+                        <div class="file-details">
+                            <span class="file-name" id="fileName"></span>
+                            <span class="file-size" id="fileSize"></span>
+                        </div>
+                        <button class="btn-icon" onclick="resetUpload()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="pow-section">
+                        <div class="pow-status" id="powStatus">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Verifying security...</span>
+                        </div>
+                        <div class="captcha-status" id="captchaStatus"></div>
+                    </div>
+
+                    <button class="btn btn-accent btn-large" id="processBtn" onclick="startProcessing()" disabled>
+                        <i class="fas fa-play"></i> START PROCESSING
+                    </button>
+                </div>
+            </section>
+
+            <section class="card results-section" id="resultsSection" style="display: none;">
+                <div class="card-header">
+                    <h2>RESULTS</h2>
+                    <button class="btn btn-primary btn-small" onclick="resetAll()">
+                        <i class="fas fa-plus"></i> NEW
+                    </button>
+                </div>
+
+                <div class="results-tabs" id="resultsTabs">
+                    <button class="tab-btn" id="originalTab" onclick="showTab('original')" style="display: none;">
+                        <i class="fas fa-file-alt"></i> ORIGINAL
+                    </button>
+                    <button class="tab-btn" id="improvedTab" onclick="showTab('improved')" style="display: none;">
+                        <i class="fas fa-magic"></i> ENHANCED
+                    </button>
+                    <button class="tab-btn" id="summaryTab" onclick="showTab('summary')" style="display: none;">
+                        <i class="fas fa-list-ul"></i> SUMMARY
+                    </button>
+                </div>
+
+                <div class="tab-content" id="originalContent" style="display: none;">
+                    <div class="result-box">
+                        <div class="result-header">
+                            <h4><i class="fas fa-file-alt"></i> Original Transcription</h4>
+                            <button class="btn btn-small" onclick="copyToClipboard('originalText')">
+                                <i class="fas fa-copy"></i> COPY
+                            </button>
+                        </div>
+                        <div class="result-content" id="originalText"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="improvedContent" style="display: none;">
+                    <div class="result-box">
+                        <div class="result-header">
+                            <h4><i class="fas fa-magic"></i> Enhanced Text</h4>
+                            <button class="btn btn-small" onclick="copyToClipboard('improvedText')">
+                                <i class="fas fa-copy"></i> COPY
+                            </button>
+                        </div>
+                        <div class="result-content" id="improvedText"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="summaryContent" style="display: none;">
+                    <div class="result-box">
+                        <div class="result-header">
+                            <h4><i class="fas fa-list-ul"></i> Summary</h4>
+                            <button class="btn btn-small" onclick="copyToClipboard('summaryText')">
+                                <i class="fas fa-copy"></i> COPY
+                            </button>
+                        </div>
+                        <div class="result-content markdown-content" id="summaryText"></div>
+                    </div>
+                </div>
+
+                <div class="no-results" id="noResults">
+                    <i class="fas fa-hourglass-half"></i>
+                    <h4>PROCESSING...</h4>
+                    <p>Results will appear as each step completes.</p>
+                </div>
+            </section>
+
+            <section class="card progress-section" id="progressSection" style="display: none;">
+                <div class="card-header">
+                    <h2>PROGRESS</h2>
+                    <div class="progress-pct" id="overallProgressText">0%</div>
+                </div>
+
+                <div class="progress-bar-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="overallProgress"></div>
+                    </div>
+                </div>
+
+                <div class="current-step" id="currentStep">
+                    <div class="step-icon" id="currentStepIcon">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <div class="step-info">
+                        <h4 id="currentStepTitle">File Upload & Preprocessing</h4>
+                        <p id="currentStepDescription">Uploading and preparing your audio file...</p>
+                        <div class="step-status processing" id="currentStepStatus">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span id="currentStepMessage">Initializing...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="steps-overview">
+                    <div class="step-indicator" id="indicator1"><div class="indicator-dot"></div><span>UPLOAD</span></div>
+                    <div class="step-indicator" id="indicator2"><div class="indicator-dot"></div><span>TRANSCRIBE</span></div>
+                    <div class="step-indicator" id="indicator3"><div class="indicator-dot"></div><span>ENHANCE</span></div>
+                    <div class="step-indicator" id="indicator4"><div class="indicator-dot"></div><span>SUMMARIZE</span></div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-border"></div>
+            <p>TRANSCRIPATOR &mdash; Powered by Whisper AI & Cerebras</p>
+        </footer>
+    </div>
+
+    <div class="toast toast-error" id="errorMessage" style="display: none;">
+        <div class="toast-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorText"></span>
+            <button class="toast-close" onclick="hideError()"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <div class="toast toast-success" id="successMessage" style="display: none;">
+        <div class="toast-content">
+            <i class="fas fa-check-circle"></i>
+            <span id="successText"></span>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="retrySection" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <i class="fas fa-exclamation-circle"></i>
+                <h3>PROCESSING FAILED</h3>
+            </div>
+            <div class="modal-body">
+                <p id="retryErrorText">An error occurred during processing.</p>
+                <p class="retry-step-info" id="retryStepInfo">Failed at: Step 1</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-accent" id="retryStepBtn" onclick="retryCurrentStep()">
+                    <i class="fas fa-redo"></i> RETRY STEP
+                </button>
+                <button class="btn btn-primary" onclick="retryFromBeginning()">
+                    <i class="fas fa-refresh"></i> START OVER
+                </button>
+                <button class="btn btn-outline" onclick="hideRetrySection()">
+                    <i class="fas fa-times"></i> CANCEL
+                </button>
+            </div>
+            <div class="retry-count" id="retryCount" style="display: none;">
+                Retry attempts: <span id="retryAttempts">0</span>/3
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

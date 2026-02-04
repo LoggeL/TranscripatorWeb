@@ -1,0 +1,14 @@
+[project]
+name = "transcripatorweb"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flask==3.0.2",
+    "groq==0.4.2",
+    "pydub==0.25.1",
+    "python-dotenv==1.0.1",
+    "requests==2.31.0",
+    "werkzeug==3.0.1",
+]

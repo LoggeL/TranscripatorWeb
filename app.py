@@ -62,6 +62,20 @@ SUPPORTED_MIMETYPES = {
     "audio/x-ms-wma",
     "audio/x-aiff",
     "audio/flac",
+    "video/webm",
+}
+
+SUPPORTED_EXTENSIONS = {
+    "mp3",
+    "wav",
+    "ogg",
+    "m4a",
+    "mp4",
+    "aac",
+    "webm",
+    "wma",
+    "aiff",
+    "flac",
 }
 
 # Helper function to generate a unique job ID
@@ -161,9 +175,17 @@ def convert_audio(input_path: str, target_format: str = "wav") -> str:
         raise ValueError(f"Error converting audio: {str(e)}")
 
 
-def allowed_file(filename):
+def allowed_file(filename, content_type=None):
     """Check if the file type is allowed for processing."""
-    mime_type, _ = mimetypes.guess_type(filename)
+    extension = os.path.splitext(filename or "")[1].lower().lstrip(".")
+    if extension in SUPPORTED_EXTENSIONS:
+        return True
+
+    normalized_content_type = (content_type or "").split(";")[0].strip().lower()
+    if normalized_content_type in SUPPORTED_MIMETYPES:
+        return True
+
+    mime_type, _ = mimetypes.guess_type(filename or "")
     return mime_type in SUPPORTED_MIMETYPES
 
 
@@ -400,7 +422,7 @@ def process_audio():
     if file.filename == "":
         return jsonify({"error": "No selected file"}), 400
 
-    if not allowed_file(file.filename):
+    if not allowed_file(file.filename, file.content_type):
         return jsonify({"error": "Unsupported audio format"}), 400
 
     # Check file size

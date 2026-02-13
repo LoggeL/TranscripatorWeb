@@ -151,6 +151,10 @@ async function startRecording() {
         mediaRecorder = new MediaRecorder(audioStream, { mimeType: getSupportedMimeType() });
         audioChunks = [];
 
+        // Hide previous download button
+        const dlBtn = document.getElementById('downloadRecordingBtn');
+        if (dlBtn) dlBtn.style.display = 'none';
+
         mediaRecorder.ondataavailable = (e) => {
             if (e.data.size > 0) audioChunks.push(e.data);
         };
@@ -159,6 +163,16 @@ async function startRecording() {
             const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
             const extension = mediaRecorder.mimeType.includes('webm') ? 'webm' : 'ogg';
             const file = new File([blob], 'recording.' + extension, { type: mediaRecorder.mimeType });
+
+            // Show download button
+            const dlBtn = document.getElementById('downloadRecordingBtn');
+            if (dlBtn) {
+                const url = URL.createObjectURL(blob);
+                dlBtn.href = url;
+                dlBtn.download = 'recording.' + extension;
+                dlBtn.style.display = 'inline-flex';
+            }
+
             processFileSelection(file);
             cleanupRecording();
         };

@@ -502,9 +502,9 @@ function handleDrop(event) {
 }
 
 function processFileSelection(file) {
-    var maxSize = 25 * 1024 * 1024;
+    var maxSize = 100 * 1024 * 1024;
     if (file.size > maxSize) {
-        showError('File size exceeds 25MB limit.');
+        showError('File size exceeds 100MB limit.');
         return;
     }
 

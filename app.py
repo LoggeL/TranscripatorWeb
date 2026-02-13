@@ -13,13 +13,14 @@ from dotenv import load_dotenv
 from pydub import AudioSegment
 import mimetypes
 import json
+import subprocess
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024  # 25MB max file size
+app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100MB max file size
 app.config["UPLOAD_FOLDER"] = tempfile.gettempdir() # Should be a persistent directory if jobs are long-lived
 
 # In-memory storage for job data (for simplicity)
@@ -47,7 +48,8 @@ CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions"
 CEREBRAS_MODEL = "qwen-3-32b"
 
 # Constants
-MAX_FILE_SIZE = 25 * 1024 * 1024  # 25MB in bytes
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB in bytes
+GROQ_MAX_FILE_SIZE = 24 * 1024 * 1024  # 24MB - Groq API limit is 25MB, leave margin
 SUPPORTED_MIMETYPES = {
     "audio/mpeg",
     "audio/mp3", 
@@ -63,6 +65,9 @@ SUPPORTED_MIMETYPES = {
     "audio/x-aiff",
     "audio/flac",
     "video/webm",
+    "video/mp4",
+    "video/quicktime",
+    "video/x-matroska",
 }
 
 SUPPORTED_EXTENSIONS = {
@@ -76,6 +81,8 @@ SUPPORTED_EXTENSIONS = {
     "wma",
     "aiff",
     "flac",
+    "mov",
+    "mkv",
 }
 
 # Helper function to generate a unique job ID
@@ -125,10 +132,11 @@ def cleanup_job(job_id):
     file_path = data.get("file_path")
     converted_path = data.get("converted_path")
     
-    if file_path and os.path.exists(file_path):
-        os.unlink(file_path)
-    if converted_path and os.path.exists(converted_path) and converted_path != file_path:
-        os.unlink(converted_path)
+    compressed_path = data.get("compressed_path")
+    
+    for p in set(filter(None, [file_path, converted_path, compressed_path])):
+        if os.path.exists(p):
+            os.unlink(p)
 
 
 def get_audio_format(file_path: str) -> str:
@@ -187,6 +195,55 @@ def allowed_file(filename, content_type=None):
 
     mime_type, _ = mimetypes.guess_type(filename or "")
     return mime_type in SUPPORTED_MIMETYPES
+
+
+def compress_audio_for_groq(file_path: str) -> str:
+    """Compress audio to under 24MB for Groq API using ffmpeg/opus."""
+    file_size = os.path.getsize(file_path)
+    if file_size <= GROQ_MAX_FILE_SIZE:
+        return file_path
+    
+    # Get duration via ffprobe
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", file_path],
+            capture_output=True, text=True, timeout=30
+        )
+        duration = float(result.stdout.strip())
+    except Exception as e:
+        raise ValueError(f"Failed to get audio duration: {e}")
+    
+    if duration <= 0:
+        raise ValueError("Audio duration is zero or negative")
+    
+    # Calculate target bitrate (bits per second), targeting 24MB output
+    target_bitrate = int((GROQ_MAX_FILE_SIZE * 8) / duration)
+    # Cap at 128kbps for quality, minimum 16kbps
+    target_bitrate_kbps = max(16, min(128, target_bitrate // 1000))
+    
+    output_path = os.path.splitext(file_path)[0] + "_compressed.ogg"
+    
+    try:
+        subprocess.run(
+            ["ffmpeg", "-i", file_path, "-vn", "-c:a", "libopus",
+             "-b:a", f"{target_bitrate_kbps}k", "-y", output_path],
+            capture_output=True, text=True, timeout=300, check=True
+        )
+    except subprocess.CalledProcessError as e:
+        raise ValueError(f"FFmpeg compression failed: {e.stderr}")
+    
+    # Verify output is under limit
+    if os.path.getsize(output_path) > GROQ_MAX_FILE_SIZE:
+        # Try again with lower bitrate
+        target_bitrate_kbps = max(16, target_bitrate_kbps // 2)
+        subprocess.run(
+            ["ffmpeg", "-i", file_path, "-vn", "-c:a", "libopus",
+             "-b:a", f"{target_bitrate_kbps}k", "-y", output_path],
+            capture_output=True, text=True, timeout=300, check=True
+        )
+    
+    return output_path
 
 
 def transcribe_audio(file_path: str) -> str:
@@ -431,7 +488,7 @@ def process_audio():
     file.seek(0)
     
     if file_size > MAX_FILE_SIZE:
-        return jsonify({"error": "File too large. Maximum size is 25MB."}), 400
+        return jsonify({"error": "File too large. Maximum size is 100MB."}), 400
     
     job_id = generate_job_id()
     filename = secure_filename(file.filename)
@@ -472,6 +529,16 @@ def process_audio():
                 cleanup_job(job_id)
                 return jsonify({"error": f"Error converting audio format: {str(e)}"}), 500
         
+        # Compress if file is too large for Groq API (25MB limit)
+        try:
+            compressed_path = compress_audio_for_groq(processed_file_path)
+            if compressed_path != processed_file_path:
+                save_job_data(job_id, "compressed_path", compressed_path)
+                processed_file_path = compressed_path
+        except Exception as e:
+            cleanup_job(job_id)
+            return jsonify({"error": f"Error compressing audio for API: {str(e)}"}), 500
+
         save_job_data(job_id, "processed_file_path", processed_file_path)
 
         return jsonify({

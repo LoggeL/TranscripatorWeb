@@ -69,9 +69,14 @@
                         </div>
                         <div class="record-timer" id="recordTimer">00:00</div>
                         <div class="record-controls">
-                            <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
-                                <i class="fas fa-microphone"></i>
-                            </button>
+                            <div class="record-buttons">
+                                <button class="record-btn" id="recordBtn" onclick="toggleRecording()">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                                <button class="pause-btn" id="pauseBtn" onclick="togglePause()" style="display:none;">
+                                    <i class="fas fa-pause"></i>
+                                </button>
+                            </div>
                             <span class="record-label" id="recordLabel">TAP TO RECORD</span>
                             <a class="btn btn-secondary" id="downloadRecordingBtn" style="display:none; margin-top: 0.5rem;" href="#" download="recording.webm">
                                 <i class="fas fa-download"></i> DOWNLOAD RECORDING

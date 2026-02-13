@@ -511,6 +511,51 @@ body {
     text-transform: uppercase;
 }
 
+.record-buttons {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.pause-btn {
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 4px 4px 0px var(--border);
+}
+
+.pause-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px var(--border);
+}
+
+.pause-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: #4caf50;
+    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.3);
+}
+
+.record-btn.paused {
+    background: var(--accent);
+    animation: pausePulse 2s ease-in-out infinite;
+}
+
+@keyframes pausePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
 /* File Selected */
 .file-selected {
     padding: 20px 0;

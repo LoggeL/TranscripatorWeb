@@ -32,6 +32,9 @@ let analyser = null;
 let animationFrameId = null;
 let recordingStartTime = null;
 let timerInterval = null;
+let isPaused = false;
+let pausedDuration = 0;
+let pauseStartTime = null;
 
 // DOM elements
 const uploadArea = document.getElementById('uploadArea');
@@ -150,6 +153,9 @@ async function startRecording() {
         // Set up recorder
         mediaRecorder = new MediaRecorder(audioStream, { mimeType: getSupportedMimeType() });
         audioChunks = [];
+        isPaused = false;
+        pausedDuration = 0;
+        pauseStartTime = null;
 
         // Hide previous download button
         const dlBtn = document.getElementById('downloadRecordingBtn');
@@ -183,12 +189,14 @@ async function startRecording() {
         // UI updates
         const btn = document.getElementById('recordBtn');
         const label = document.getElementById('recordLabel');
+        const pauseBtn = document.getElementById('pauseBtn');
         btn.classList.add('recording');
         btn.textContent = '';
         var stopIcon = document.createElement('i');
         stopIcon.className = 'fas fa-stop';
         btn.appendChild(stopIcon);
         label.textContent = 'TAP TO STOP';
+        pauseBtn.style.display = 'inline-flex';
 
         startTimer();
         drawVisualizer();
@@ -200,21 +208,90 @@ async function startRecording() {
 }
 
 function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
+    if (mediaRecorder && (mediaRecorder.state === 'recording' || mediaRecorder.state === 'paused')) {
         mediaRecorder.stop();
     }
 
     const btn = document.getElementById('recordBtn');
     const label = document.getElementById('recordLabel');
-    btn.classList.remove('recording');
+    const pauseBtn = document.getElementById('pauseBtn');
+    btn.classList.remove('recording', 'paused');
     btn.textContent = '';
     var micIcon = document.createElement('i');
     micIcon.className = 'fas fa-microphone';
     btn.appendChild(micIcon);
     label.textContent = 'TAP TO RECORD';
+    pauseBtn.style.display = 'none';
+    pauseBtn.classList.remove('active');
+    isPaused = false;
 
     stopTimer();
     stopVisualizer();
+}
+
+function togglePause() {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+
+    if (isPaused) {
+        resumeRecording();
+    } else {
+        pauseRecording();
+    }
+}
+
+function pauseRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.pause();
+        isPaused = true;
+        pauseStartTime = Date.now();
+
+        // UI updates
+        const recordBtn = document.getElementById('recordBtn');
+        const label = document.getElementById('recordLabel');
+        const pauseBtn = document.getElementById('pauseBtn');
+        
+        recordBtn.classList.add('paused');
+        label.textContent = 'PAUSED';
+        
+        pauseBtn.classList.add('active');
+        pauseBtn.textContent = '';
+        var playIcon = document.createElement('i');
+        playIcon.className = 'fas fa-play';
+        pauseBtn.appendChild(playIcon);
+
+        stopTimer();
+        stopVisualizer();
+    }
+}
+
+function resumeRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'paused') {
+        mediaRecorder.resume();
+        isPaused = false;
+        
+        // Update paused duration
+        if (pauseStartTime) {
+            pausedDuration += Date.now() - pauseStartTime;
+            pauseStartTime = null;
+        }
+
+        // UI updates
+        const recordBtn = document.getElementById('recordBtn');
+        const label = document.getElementById('recordLabel');
+        const pauseBtn = document.getElementById('pauseBtn');
+        
+        recordBtn.classList.remove('paused');
+        label.textContent = 'TAP TO STOP';
+        
+        pauseBtn.classList.remove('active');
+        pauseBtn.textContent = '';
+        var pauseIcon = document.createElement('i');
+        pauseIcon.className = 'fas fa-pause';
+        pauseBtn.appendChild(pauseIcon);
+
+        startTimer();
+        drawVisualizer();
+    }
 }
 
 function cleanupRecording() {
@@ -241,7 +318,9 @@ function getSupportedMimeType() {
 function startTimer() {
     const timerEl = document.getElementById('recordTimer');
     timerInterval = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        const currentPausedDuration = isPaused && pauseStartTime ? (Date.now() - pauseStartTime) : 0;
+        const totalPausedTime = pausedDuration + currentPausedDuration;
+        const elapsed = Math.floor((Date.now() - recordingStartTime - totalPausedTime) / 1000);
         const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
         const secs = String(elapsed % 60).padStart(2, '0');
         timerEl.textContent = mins + ':' + secs;

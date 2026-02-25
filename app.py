@@ -45,7 +45,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
 GROQ_API_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions"
-CEREBRAS_MODEL = "zai-glm-4.7"
+CEREBRAS_MODEL = "llama3.1-8b"
 
 # Constants
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB in bytes

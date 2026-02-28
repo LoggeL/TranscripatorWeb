@@ -169,6 +169,27 @@ CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
 - **Challenge-Response**: Cryptographic challenges prevent automated abuse
 - **Rate Limiting**: Built-in protection against excessive requests
 
+## 🛡️ Proof of Work (Anti-Abuse)
+
+Instead of CAPTCHAs or user accounts, TranscriptorWeb uses an invisible **Proof-of-Work** system to prevent API abuse:
+
+1. **Challenge Request** — When a user uploads a file, the server generates a random challenge string and a difficulty level (default: 4 leading zeros in the SHA-256 hash).
+2. **Background Computation** — A Web Worker (`pow-worker.js`) runs in a separate browser thread, incrementing a nonce until it finds `SHA-256(challenge + nonce)` with the required number of leading zeros. This takes a few seconds on a normal device — invisible to the user.
+3. **Server Verification** — The client submits the nonce alongside the transcription request. The server re-hashes `challenge + nonce` and verifies the result in O(1). Challenges expire after 5 minutes.
+
+**Why this works:**
+- **No friction** — users never see a CAPTCHA or login screen
+- **Expensive to abuse** — each request costs real CPU time, making bulk automated abuse impractical
+- **Cheap to verify** — the server checks one hash per request
+- **No state needed** — challenges are short-lived and self-contained
+
+Configuration in `app.py`:
+```python
+POW_DIFFICULTY = 4        # Leading zeros required (~65k attempts avg)
+POW_EXPIRES_SECONDS = 300 # Challenge TTL (5 min)
+POW_MAX_DIFFICULTY = 6    # Upper bound
+```
+
 ## 🤝 Contributing
 
 1. Fork the repository

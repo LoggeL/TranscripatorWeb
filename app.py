@@ -42,10 +42,10 @@ POW_MAX_DIFFICULTY = 6  # Maximum difficulty to prevent excessive computation
 
 # API configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GROQ_API_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
-CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions"
-CEREBRAS_MODEL = "gpt-oss-120b"
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "google/gemini-3.1-flash-lite"
 
 # Constants
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB in bytes
@@ -265,15 +265,28 @@ def transcribe_audio(file_path: str) -> str:
     return response.text
 
 
-def improve_transcription_cerebras(transcription: str) -> str:
-    """Improve the transcription using the Cerebras API."""
+def call_openrouter(system_prompt: str, user_prompt: str) -> str:
+    """Call OpenRouter API with the configured model."""
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {CEREBRAS_API_KEY}"
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}"
     }
+    payload = {
+        "model": OPENROUTER_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+    }
+    response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload)
+    if response.status_code != 200:
+        raise Exception(f"OpenRouter API request failed with status {response.status_code}: {response.text}")
+    return response.json()['choices'][0]['message']['content']
 
-    prompt = f'''
-Task: Improve the following transcription
+
+def improve_transcription_cerebras(transcription: str) -> str:
+    """Improve the transcription using OpenRouter / Gemini Flash Lite."""
+    prompt = f'''Task: Improve the following transcription
 Instructions:
 1. Fix any grammatical or spelling errors
 2. Improve readability and coherence
@@ -284,37 +297,15 @@ Instructions:
 Original transcription:
 {transcription}
 
-Improved transcription:
-'''
-    
-    payload = {
-        "model": CEREBRAS_MODEL,
-        "stream": False,
-        "temperature": 0.3,
-        "top_p": 1,
-        "messages": [
-            {"role": "system", "content": "You are a helpful assistant that improves transcriptions."},
-            {"role": "user", "content": prompt}
-        ]
-    }
-    
-    response = requests.post(CEREBRAS_API_URL, headers=headers, json=payload)
-    
-    if response.status_code != 200:
-        raise Exception(f"Cerebras API request failed with status {response.status_code}: {response.text}")
-    
-    return remove_think_tags(response.json()['choices'][0]['message']['content'])   
+Improved transcription:'''
+    return remove_think_tags(call_openrouter(
+        "You are a helpful assistant that improves transcriptions.", prompt
+    ))
 
 
 def generate_summary_cerebras(transcription: str) -> str:
-    """Generate a summary of the transcription using the Cerebras API."""
-    headers = {
-        "Content-Type": "application/json", 
-        "Authorization": f"Bearer {CEREBRAS_API_KEY}"
-    }
-
-    prompt = f'''
-Task: Summarize the following transcription
+    """Generate a summary of the transcription using OpenRouter / Gemini Flash Lite."""
+    prompt = f'''Task: Summarize the following transcription
 Instructions:
 1. Provide a concise summary of the main points
 2. Use bullet points for clarity
@@ -327,26 +318,10 @@ Instructions:
 Transcription:
 {transcription}
 
-Summary:
-'''
-    
-    payload = {
-        "model": CEREBRAS_MODEL,
-        "stream": False,
-        "temperature": 0.5,
-        "top_p": 1,
-        "messages": [
-            {"role": "system", "content": "You are a helpful assistant that summarizes transcriptions."},
-            {"role": "user", "content": prompt}
-        ]
-    }
-    
-    response = requests.post(CEREBRAS_API_URL, headers=headers, json=payload)
-    
-    if response.status_code != 200:
-        raise Exception(f"Cerebras API request failed with status {response.status_code}: {response.text}")
-    
-    return remove_think_tags(response.json()['choices'][0]['message']['content'])
+Summary:'''
+    return remove_think_tags(call_openrouter(
+        "You are a helpful assistant that summarizes transcriptions.", prompt
+    ))
 
 
 @app.route("/")
@@ -687,8 +662,8 @@ def remove_think_tags(text: str) -> str:
 if __name__ == "__main__":
     if not GROQ_API_KEY:
         raise ValueError("GROQ_API_KEY is not set in the .env file")
-    if not CEREBRAS_API_KEY:
-        raise ValueError("CEREBRAS_API_KEY is not set in the .env file")
+    if not OPENROUTER_API_KEY:
+        raise ValueError("OPENROUTER_API_KEY is not set in the .env file")
     
     # Create upload folder if it doesn't exist, good practice
     upload_folder = app.config["UPLOAD_FOLDER"]

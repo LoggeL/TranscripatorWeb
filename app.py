@@ -9,7 +9,8 @@ import secrets
 import re
 import subprocess
 import mimetypes
-from flask import Flask, render_template, request, jsonify
+import json
+from flask import Flask, render_template, request, jsonify, Response
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
@@ -407,6 +408,137 @@ def summarize_endpoint():
         return jsonify({"job_id": job_id, "summary": summary}), 200
     except Exception as e:
         return jsonify({"error": f"Summarization failed: {str(e)}"}), 500
+
+
+def stream_gemini_with_audio(file_path: str, prompt: str):
+    """Stream audio transcription from Gemini via OpenRouter."""
+    with open(file_path, "rb") as f:
+        audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+    ext = os.path.splitext(file_path)[1].lower().lstrip(".")
+    audio_format = AUDIO_FORMAT_MAP.get(ext, "ogg")
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+    }
+    payload = {
+        "model": OPENROUTER_MODEL,
+        "stream": True,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_audio", "input_audio": {"data": audio_b64, "format": audio_format}},
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ],
+    }
+    response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=120, stream=True)
+    if response.status_code != 200:
+        raise Exception(f"OpenRouter API failed ({response.status_code}): {response.text}")
+    return response
+
+
+def stream_gemini_text(system_prompt: str, user_prompt: str):
+    """Stream text completion from Gemini via OpenRouter."""
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+    }
+    payload = {
+        "model": OPENROUTER_MODEL,
+        "stream": True,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    }
+    response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=60, stream=True)
+    if response.status_code != 200:
+        raise Exception(f"OpenRouter API failed ({response.status_code}): {response.text}")
+    return response
+
+
+def iter_sse_tokens(response):
+    """Iterate over SSE tokens from an OpenRouter streaming response."""
+    for line in response.iter_lines(decode_unicode=True):
+        if not line or not line.startswith("data: "):
+            continue
+        data_str = line[6:]
+        if data_str.strip() == "[DONE]":
+            break
+        try:
+            chunk = json.loads(data_str)
+            delta = chunk.get("choices", [{}])[0].get("delta", {})
+            token = delta.get("content")
+            if token:
+                yield token
+        except (json.JSONDecodeError, IndexError, KeyError):
+            continue
+
+
+@app.route("/stream/<job_id>")
+def stream_endpoint(job_id):
+    if job_id not in job_store:
+        return jsonify({"error": "Job not found"}), 404
+
+    file_path = get_job_data(job_id, "processed_file_path")
+    if not file_path or not os.path.exists(file_path):
+        return jsonify({"error": "File not found"}), 404
+
+    def generate():
+        try:
+            # --- Transcription ---
+            resp = stream_gemini_with_audio(
+                file_path,
+                "Transcribe this audio accurately. Return ONLY the transcription text, nothing else. "
+                "Use the same language as the audio.",
+            )
+            full_transcription = []
+            for token in iter_sse_tokens(resp):
+                full_transcription.append(token)
+                yield f"data: {json.dumps({'section': 'transcription', 'token': token})}\n\n"
+            transcription_text = remove_think_tags("".join(full_transcription))
+            save_job_data(job_id, "original_transcription", transcription_text)
+
+            # --- Improvement ---
+            resp = stream_gemini_text(
+                "You are a helpful assistant that improves transcriptions.",
+                f"Improve this transcription: fix grammar, spelling, punctuation. "
+                f"Improve readability while maintaining original meaning. "
+                f"Return ONLY the improved text.\n\n{transcription_text}",
+            )
+            full_improved = []
+            for token in iter_sse_tokens(resp):
+                full_improved.append(token)
+                yield f"data: {json.dumps({'section': 'improved', 'token': token})}\n\n"
+            improved_text = remove_think_tags("".join(full_improved))
+            save_job_data(job_id, "improved_transcription", improved_text)
+
+            # --- Summary ---
+            resp = stream_gemini_text(
+                "You are a helpful assistant that summarizes transcriptions.",
+                f"Summarize this transcription using bullet points. "
+                f"Write from the perspective of the transcript. Use the same language. "
+                f"ONLY RETURN THE SUMMARY.\n\n{improved_text}",
+            )
+            full_summary = []
+            for token in iter_sse_tokens(resp):
+                full_summary.append(token)
+                yield f"data: {json.dumps({'section': 'summary', 'token': token})}\n\n"
+            summary_text = remove_think_tags("".join(full_summary))
+            save_job_data(job_id, "summary", summary_text)
+
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return Response(generate(), mimetype="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    })
 
 
 @app.route("/cleanup/<job_id>", methods=["DELETE"])

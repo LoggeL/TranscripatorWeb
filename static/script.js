@@ -654,11 +654,7 @@ async function startProcessing() {
         currentStep = 1;
         await processStep1();
         currentStep = 2;
-        await processStep2();
-        currentStep = 3;
-        await processStep3();
-        currentStep = 4;
-        await processStep4();
+        await streamProcessing();
         showProcessingComplete();
     } catch (error) {
         lastError = error;
@@ -710,78 +706,93 @@ async function processStep1() {
     await delay(500);
 }
 
-async function processStep2() {
-    updateCurrentStep(2, 'processing', 'Converting speech to text...');
-    updateStepIndicator(2, 'active');
-    updateOverallProgress(30);
+function streamProcessing() {
+    return new Promise(function(resolve, reject) {
+        var currentSection = null;
+        var sectionMap = {
+            'transcription': { step: 2, label: 'original', stepTitle: 'Converting speech to text...', doneMsg: 'Transcription completed', progress: [30, 50] },
+            'improved': { step: 3, label: 'improved', stepTitle: 'Enhancing text quality...', doneMsg: 'Text enhanced successfully', progress: [55, 75] },
+            'summary': { step: 4, label: 'summary', stepTitle: 'Generating summary...', doneMsg: 'Summary generated', progress: [80, 100] }
+        };
+        var accumulatedText = { transcription: '', improved: '', summary: '' };
 
-    var response = await fetch('/transcribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: currentJobId })
+        var source = new EventSource('/stream/' + currentJobId);
+
+        source.onmessage = function(event) {
+            var data;
+            try { data = JSON.parse(event.data); } catch(e) { return; }
+
+            if (data.error) {
+                source.close();
+                reject(new Error(data.error));
+                return;
+            }
+
+            if (data.done) {
+                // Finalize last section
+                if (currentSection) {
+                    var lastInfo = sectionMap[currentSection];
+                    updateCurrentStep(lastInfo.step, 'completed', lastInfo.doneMsg);
+                    updateStepIndicator(lastInfo.step, 'completed');
+                    updateOverallProgress(lastInfo.progress[1]);
+                    originalContent[lastInfo.label] = accumulatedText[currentSection];
+                }
+                source.close();
+                resolve();
+                return;
+            }
+
+            var section = data.section;
+            var token = data.token;
+            if (!section || !token) return;
+
+            var info = sectionMap[section];
+            if (!info) return;
+
+            // When section changes, finalize previous and start new
+            if (section !== currentSection) {
+                if (currentSection) {
+                    var prevInfo = sectionMap[currentSection];
+                    updateCurrentStep(prevInfo.step, 'completed', prevInfo.doneMsg);
+                    updateStepIndicator(prevInfo.step, 'completed');
+                    updateOverallProgress(prevInfo.progress[1]);
+                    originalContent[prevInfo.label] = accumulatedText[currentSection];
+                }
+                currentSection = section;
+                currentStep = info.step;
+                updateCurrentStep(info.step, 'processing', info.stepTitle);
+                updateStepIndicator(info.step, 'active');
+                updateOverallProgress(info.progress[0]);
+
+                // Prepare the tab and content area
+                hideNoResults();
+                document.getElementById(info.label + 'Tab').style.display = 'flex';
+                activateTab(info.label);
+                document.getElementById(info.label + 'Text').textContent = '';
+            }
+
+            accumulatedText[section] += token;
+
+            // Append token to the content element (summary uses marked for markdown, same as showResult)
+            var contentEl = document.getElementById(info.label + 'Text');
+            if (section === 'summary') {
+                marked.setOptions({ breaks: true, gfm: true });
+                // marked.parse renders the user's own transcription summary - trusted content
+                contentEl.innerHTML = marked.parse(accumulatedText[section]);
+            } else {
+                contentEl.textContent = accumulatedText[section];
+            }
+        };
+
+        source.onerror = function() {
+            source.close();
+            if (currentSection) {
+                var info = sectionMap[currentSection];
+                originalContent[info.label] = accumulatedText[currentSection];
+            }
+            reject(new Error('Stream connection lost'));
+        };
     });
-
-    if (!response.ok) {
-        var error = await response.json();
-        throw new Error(error.error || 'Transcription failed');
-    }
-
-    var result = await response.json();
-    showResult('original', result.original_transcription);
-    updateCurrentStep(2, 'completed', 'Transcription completed');
-    updateStepIndicator(2, 'completed');
-    updateOverallProgress(50);
-    await delay(500);
-}
-
-async function processStep3() {
-    updateCurrentStep(3, 'processing', 'Enhancing text quality...');
-    updateStepIndicator(3, 'active');
-    updateOverallProgress(60);
-
-    var originalText = document.getElementById('originalText').textContent;
-    var response = await fetch('/improve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: currentJobId, transcription: originalText })
-    });
-
-    if (!response.ok) {
-        var error = await response.json();
-        throw new Error(error.error || 'Enhancement failed');
-    }
-
-    var result = await response.json();
-    showResult('improved', result.improved_transcription);
-    updateCurrentStep(3, 'completed', 'Text enhanced successfully');
-    updateStepIndicator(3, 'completed');
-    updateOverallProgress(75);
-    await delay(500);
-}
-
-async function processStep4() {
-    updateCurrentStep(4, 'processing', 'Generating summary...');
-    updateStepIndicator(4, 'active');
-    updateOverallProgress(85);
-
-    var improvedText = document.getElementById('improvedText').textContent;
-    var response = await fetch('/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: currentJobId, transcription: improvedText })
-    });
-
-    if (!response.ok) {
-        var error = await response.json();
-        throw new Error(error.error || 'Summarization failed');
-    }
-
-    var result = await response.json();
-    showResult('summary', result.summary);
-    updateCurrentStep(4, 'completed', 'Summary generated');
-    updateStepIndicator(4, 'completed');
-    updateOverallProgress(100);
-    await delay(500);
 }
 
 function showProcessingComplete() {
@@ -808,15 +819,12 @@ async function retryCurrentStep() {
     updateProcessButton();
 
     try {
-        for (var step = currentStep; step <= 4; step++) {
-            currentStep = step;
-            switch (step) {
-                case 1: await processStep1(); break;
-                case 2: await processStep2(); break;
-                case 3: await processStep3(); break;
-                case 4: await processStep4(); break;
-            }
+        if (currentStep <= 1) {
+            currentStep = 1;
+            await processStep1();
         }
+        currentStep = 2;
+        await streamProcessing();
         showProcessingComplete();
     } catch (error) {
         lastError = error;

@@ -34,7 +34,7 @@ POW_DIFFICULTY = 4
 # API config — only OpenRouter needed now
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = "google/gemini-3.1-flash-lite"
+OPENROUTER_MODEL = "google/gemini-3.1-flash-lite-preview"
 
 # Constants
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB

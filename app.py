@@ -19,6 +19,7 @@ load_dotenv()
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100MB max
 app.config["UPLOAD_FOLDER"] = tempfile.gettempdir()
+app.config["JSON_AS_ASCII"] = False  # Preserve unicode (umlauts etc.)
 
 # In-memory stores
 job_store = {}

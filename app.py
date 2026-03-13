@@ -500,7 +500,7 @@ def stream_endpoint(job_id):
             full_transcription = []
             for token in iter_sse_tokens(resp):
                 full_transcription.append(token)
-                yield f"data: {json.dumps({'section': 'transcription', 'token': token})}\n\n"
+                yield f"data: {json.dumps({'section': 'transcription', 'token': token}, ensure_ascii=False)}\n\n"
             transcription_text = remove_think_tags("".join(full_transcription))
             save_job_data(job_id, "original_transcription", transcription_text)
 
@@ -514,7 +514,7 @@ def stream_endpoint(job_id):
             full_improved = []
             for token in iter_sse_tokens(resp):
                 full_improved.append(token)
-                yield f"data: {json.dumps({'section': 'improved', 'token': token})}\n\n"
+                yield f"data: {json.dumps({'section': 'improved', 'token': token}, ensure_ascii=False)}\n\n"
             improved_text = remove_think_tags("".join(full_improved))
             save_job_data(job_id, "improved_transcription", improved_text)
 
@@ -528,7 +528,7 @@ def stream_endpoint(job_id):
             full_summary = []
             for token in iter_sse_tokens(resp):
                 full_summary.append(token)
-                yield f"data: {json.dumps({'section': 'summary', 'token': token})}\n\n"
+                yield f"data: {json.dumps({'section': 'summary', 'token': token}, ensure_ascii=False)}\n\n"
             summary_text = remove_think_tags("".join(full_summary))
             save_job_data(job_id, "summary", summary_text)
 

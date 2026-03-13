@@ -33,10 +33,14 @@ DEBUG = os.getenv("FLASK_ENV", "development") == "development"
 POW_EXPIRES_SECONDS = 300
 POW_DIFFICULTY = 4
 
-# API config — only OpenRouter needed now
+# API config
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = "google/gemini-3-flash-preview"
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
+GROQ_MAX_FILE_SIZE = 24 * 1024 * 1024  # 24MB
 
 # Constants
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
@@ -147,6 +151,45 @@ def compress_audio(file_path: str, max_size: int = 24 * 1024 * 1024) -> str:
         capture_output=True, text=True, timeout=300, check=True,
     )
     return output_path
+
+
+# --- Groq Whisper transcription ---
+
+def compress_audio_for_groq(file_path: str) -> str:
+    """Compress audio to under 24MB for Groq Whisper API."""
+    if os.path.getsize(file_path) <= GROQ_MAX_FILE_SIZE:
+        return file_path
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", file_path],
+            capture_output=True, text=True, timeout=30,
+        )
+        duration = float(result.stdout.strip())
+    except Exception as e:
+        raise ValueError(f"Failed to get audio duration: {e}")
+    target_kbps = max(16, min(128, int((GROQ_MAX_FILE_SIZE * 8) / duration) // 1000))
+    output_path = os.path.splitext(file_path)[0] + "_groq.ogg"
+    subprocess.run(
+        ["ffmpeg", "-i", file_path, "-vn", "-c:a", "libopus", "-b:a", f"{target_kbps}k", "-y", output_path],
+        capture_output=True, text=True, timeout=300, check=True,
+    )
+    return output_path
+
+
+def transcribe_with_groq(file_path: str) -> str:
+    """Transcribe audio using Groq Whisper large-v3."""
+    compressed = compress_audio_for_groq(file_path)
+    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+    with open(compressed, "rb") as f:
+        files = {"file": (os.path.basename(compressed), f, "application/octet-stream")}
+        data = {"model": "whisper-large-v3", "response_format": "text", "temperature": 0.0}
+        response = requests.post(GROQ_API_URL, headers=headers, files=files, data=data, timeout=120)
+    if compressed != file_path and os.path.exists(compressed):
+        os.unlink(compressed)
+    if response.status_code != 200:
+        raise Exception(f"Groq Whisper failed ({response.status_code}): {response.text}")
+    return response.text.strip()
 
 
 # --- Gemini API calls via OpenRouter ---
@@ -491,18 +534,14 @@ def stream_endpoint(job_id):
 
     def generate():
         try:
-            # --- Transcription ---
-            resp = stream_gemini_with_audio(
-                file_path,
-                "Transcribe this audio accurately. Return ONLY the transcription text, nothing else. "
-                "Use the same language as the audio.",
-            )
-            full_transcription = []
-            for token in iter_sse_tokens(resp):
-                full_transcription.append(token)
-                yield f"data: {json.dumps({'section': 'transcription', 'token': token}, ensure_ascii=False)}\n\n"
-            transcription_text = remove_think_tags("".join(full_transcription))
+            # --- Transcription (Groq Whisper) ---
+            transcription_text = transcribe_with_groq(file_path)
             save_job_data(job_id, "original_transcription", transcription_text)
+            # Stream transcription token by token (word chunks)
+            words = transcription_text.split(" ")
+            for i, word in enumerate(words):
+                token = (word + " ") if i < len(words) - 1 else word
+                yield f"data: {json.dumps({'section': 'transcription', 'token': token}, ensure_ascii=False)}\n\n"
 
             # --- Improvement ---
             resp = stream_gemini_text(
